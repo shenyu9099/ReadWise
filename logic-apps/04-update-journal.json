@@ -1,0 +1,130 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "contentVersion": "1.0.0.0",
+        "triggers": {
+            "manual": {
+                "type": "Request",
+                "kind": "Http",
+                "inputs": {
+                    "method": "POST",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "userId": {
+                                "type": "string"
+                            },
+                            "title": {
+                                "type": "string"
+                            },
+                            "content": {
+                                "type": "string"
+                            },
+                            "coverUrl": {
+                                "type": "string"
+                            },
+                            "notesUrl": {
+                                "type": "string"
+                            },
+                            "audioUrl": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "userId"
+                        ]
+                    }
+                }
+            }
+        },
+        "actions": {
+            "Get_Existing_Journal": {
+                "runAfter": {},
+                "type": "ApiConnection",
+                "inputs": {
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['documentdb']['connectionId']"
+                        }
+                    },
+                    "method": "get",
+                    "path": "/v2/cosmosdb/@{encodeURIComponent('readwisecosmos')}/dbs/@{encodeURIComponent('ReadWiseContentDB')}/colls/@{encodeURIComponent('Journals')}/docs/@{encodeURIComponent(triggerBody()?['id'])}",
+                    "headers": {
+                        "x-ms-documentdb-raw-partitionkey": "\"@{triggerBody()?['userId']}\""
+                    }
+                }
+            },
+            "Replace_Journal_Document": {
+                "runAfter": {
+                    "Get_Existing_Journal": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "ApiConnection",
+                "inputs": {
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['documentdb']['connectionId']"
+                        }
+                    },
+                    "method": "put",
+                    "path": "/v2/cosmosdb/@{encodeURIComponent('readwisecosmos')}/dbs/@{encodeURIComponent('ReadWiseContentDB')}/colls/@{encodeURIComponent('Journals')}/docs/@{encodeURIComponent(triggerBody()?['id'])}",
+                    "body": {
+                        "id": "@{triggerBody()?['id']}",
+                        "userId": "@{triggerBody()?['userId']}",
+                        "username": "@{body('Get_Existing_Journal')?['username']}",
+                        "title": "@{coalesce(triggerBody()?['title'], body('Get_Existing_Journal')?['title'])}",
+                        "content": "@{coalesce(triggerBody()?['content'], body('Get_Existing_Journal')?['content'])}",
+                        "coverUrl": "@{coalesce(triggerBody()?['coverUrl'], body('Get_Existing_Journal')?['coverUrl'])}",
+                        "notesUrl": "@{coalesce(triggerBody()?['notesUrl'], body('Get_Existing_Journal')?['notesUrl'])}",
+                        "audioUrl": "@{coalesce(triggerBody()?['audioUrl'], body('Get_Existing_Journal')?['audioUrl'])}",
+                        "created_at": "@{body('Get_Existing_Journal')?['created_at']}",
+                        "updated_at": "@{utcNow()}"
+                    },
+                    "headers": {
+                        "x-ms-documentdb-raw-partitionkey": "\"@{triggerBody()?['userId']}\""
+                    }
+                }
+            },
+            "Response_success": {
+                "runAfter": {
+                    "Replace_Journal_Document": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Response",
+                "kind": "Http",
+                "inputs": {
+                    "statusCode": 200,
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    },
+                    "body": "@body('Replace_Journal_Document')"
+                }
+            }
+        },
+        "outputs": {},
+        "parameters": {
+            "$connections": {
+                "type": "Object",
+                "defaultValue": {}
+            }
+        }
+    },
+    "parameters": {
+        "$connections": {
+            "value": {
+                "documentdb": {
+                    "id": "/subscriptions/4a3defe0-aba0-41e1-9966-de8f64dbe2b3/providers/Microsoft.Web/locations/uksouth/managedApis/documentdb",
+                    "connectionId": "/subscriptions/4a3defe0-aba0-41e1-9966-de8f64dbe2b3/resourceGroups/ReadWise-RG/providers/Microsoft.Web/connections/documentdb",
+                    "connectionName": "documentdb"
+                }
+            }
+        }
+    }
+}

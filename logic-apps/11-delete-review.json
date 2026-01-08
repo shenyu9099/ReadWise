@@ -1,0 +1,86 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "contentVersion": "1.0.0.0",
+        "triggers": {
+            "manual": {
+                "type": "Request",
+                "kind": "Http",
+                "inputs": {
+                    "method": "POST",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "journalId": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "journalId"
+                        ]
+                    }
+                }
+            }
+        },
+        "actions": {
+            "Delete_Review_Document": {
+                "runAfter": {},
+                "type": "ApiConnection",
+                "inputs": {
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['documentdb']['connectionId']"
+                        }
+                    },
+                    "method": "delete",
+                    "path": "/v2/cosmosdb/@{encodeURIComponent('readwisecosmos')}/dbs/@{encodeURIComponent('ReadWiseContentDB')}/colls/@{encodeURIComponent('Reviews')}/docs/@{encodeURIComponent(triggerBody()?['id'])}",
+                    "headers": {
+                        "x-ms-documentdb-raw-partitionkey": "\"@{triggerBody()?['journalId']}\""
+                    }
+                }
+            },
+            "Response_success": {
+                "runAfter": {
+                    "Delete_Review_Document": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Response",
+                "kind": "Http",
+                "inputs": {
+                    "statusCode": 200,
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    },
+                    "body": {
+                        "success": true,
+                        "message": "Review deleted successfully"
+                    }
+                }
+            }
+        },
+        "outputs": {},
+        "parameters": {
+            "$connections": {
+                "type": "Object",
+                "defaultValue": {}
+            }
+        }
+    },
+    "parameters": {
+        "$connections": {
+            "value": {
+                "documentdb": {
+                    "id": "/subscriptions/4a3defe0-aba0-41e1-9966-de8f64dbe2b3/providers/Microsoft.Web/locations/uksouth/managedApis/documentdb",
+                    "connectionId": "/subscriptions/4a3defe0-aba0-41e1-9966-de8f64dbe2b3/resourceGroups/ReadWise-RG/providers/Microsoft.Web/connections/documentdb",
+                    "connectionName": "documentdb"
+                }
+            }
+        }
+    }
+}

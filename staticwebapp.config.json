@@ -1,0 +1,39 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/css/*", "/js/*", "*.{css,js,map,png,gif,ico,jpg,svg,woff,woff2,ttf,eot}"]
+  },
+  "routes": [
+    {
+      "route": "/dashboard.html",
+      "allowedRoles": ["authenticated", "anonymous"]
+    },
+    {
+      "route": "/create-journal.html",
+      "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/journal-detail.html",
+      "allowedRoles": ["authenticated", "anonymous"]
+    },
+    {
+      "route": "/profile.html",
+      "allowedRoles": ["authenticated"]
+    }
+  ],
+  "responseOverrides": {
+    "404": {
+      "rewrite": "/index.html",
+      "statusCode": 200
+    }
+  },
+  "globalHeaders": {
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://az416426.vo.msecnd.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.logic.azure.com https://*.applicationinsights.azure.com https://*.blob.core.windows.net;"
+  },
+  "mimeTypes": {
+    ".json": "application/json",
+    ".woff": "application/font-woff",
+    ".woff2": "application/font-woff2"
+  }
+}
+

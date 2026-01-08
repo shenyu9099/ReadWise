@@ -1,0 +1,125 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "contentVersion": "1.0.0.0",
+        "triggers": {
+            "manual": {
+                "type": "Request",
+                "kind": "Http",
+                "inputs": {
+                    "method": "POST",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "journalId": {
+                                "type": "string"
+                            },
+                            "userId": {
+                                "type": "string"
+                            },
+                            "username": {
+                                "type": "string"
+                            },
+                            "content": {
+                                "type": "string"
+                            },
+                            "audioUrl": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "journalId",
+                            "userId",
+                            "username",
+                            "content"
+                        ]
+                    }
+                }
+            }
+        },
+        "actions": {
+            "Initialize_reviewId": {
+                "runAfter": {},
+                "type": "InitializeVariable",
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "reviewId",
+                            "type": "string",
+                            "value": "@{guid()}"
+                        }
+                    ]
+                }
+            },
+            "Create_Review_Document": {
+                "runAfter": {
+                    "Initialize_reviewId": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "ApiConnection",
+                "inputs": {
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['documentdb']['connectionId']"
+                        }
+                    },
+                    "method": "post",
+                    "path": "/v2/cosmosdb/@{encodeURIComponent('readwisecosmos')}/dbs/@{encodeURIComponent('ReadWiseContentDB')}/colls/@{encodeURIComponent('Reviews')}/docs",
+                    "body": {
+                        "id": "@{variables('reviewId')}",
+                        "journalId": "@{triggerBody()?['journalId']}",
+                        "userId": "@{triggerBody()?['userId']}",
+                        "username": "@{triggerBody()?['username']}",
+                        "content": "@{triggerBody()?['content']}",
+                        "audioUrl": "@{coalesce(triggerBody()?['audioUrl'], '')}",
+                        "created_at": "@{utcNow()}",
+                        "updated_at": "@{utcNow()}"
+                    },
+                    "headers": {
+                        "x-ms-documentdb-raw-partitionkey": "\"@{triggerBody()?['journalId']}\""
+                    }
+                }
+            },
+            "Response_success": {
+                "runAfter": {
+                    "Create_Review_Document": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Response",
+                "kind": "Http",
+                "inputs": {
+                    "statusCode": 201,
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    },
+                    "body": {
+                        "success": true,
+                        "message": "Review created successfully",
+                        "review": "@body('Create_Review_Document')"
+                    }
+                }
+            }
+        },
+        "outputs": {},
+        "parameters": {
+            "$connections": {
+                "type": "Object",
+                "defaultValue": {}
+            }
+        }
+    },
+    "parameters": {
+        "$connections": {
+            "value": {
+                "documentdb": {
+                    "id": "/subscriptions/4a3defe0-aba0-41e1-9966-de8f64dbe2b3/providers/Microsoft.Web/locations/uksouth/managedApis/documentdb",
+                    "connectionId": "/subscriptions/4a3defe0-aba0-41e1-9966-de8f64dbe2b3/resourceGroups/ReadWise-RG/providers/Microsoft.Web/connections/documentdb",
+                    "connectionName": "documentdb"
+                }
+            }
+        }
+    }
+}

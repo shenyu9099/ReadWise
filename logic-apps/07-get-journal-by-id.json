@@ -1,0 +1,109 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "contentVersion": "1.0.0.0",
+        "triggers": {
+            "manual": {
+                "type": "Request",
+                "kind": "Http",
+                "inputs": {
+                    "method": "GET",
+                    "schema": {}
+                }
+            }
+        },
+        "actions": {
+            "Get_Journal_Document": {
+                "runAfter": {},
+                "type": "ApiConnection",
+                "inputs": {
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['documentdb']['connectionId']"
+                        }
+                    },
+                    "method": "get",
+                    "path": "/v2/cosmosdb/@{encodeURIComponent('readwisecosmos')}/dbs/@{encodeURIComponent('ReadWiseContentDB')}/colls/@{encodeURIComponent('Journals')}/docs/@{encodeURIComponent(triggerOutputs()['queries']['id'])}",
+                    "headers": {
+                        "x-ms-documentdb-raw-partitionkey": "\"@{triggerOutputs()['queries']['userId']}\""
+                    }
+                }
+            },
+            "Get_Reviews_For_Journal": {
+                "runAfter": {
+                    "Get_Journal_Document": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "ApiConnection",
+                "inputs": {
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['documentdb']['connectionId']"
+                        }
+                    },
+                    "method": "get",
+                    "path": "/v2/cosmosdb/@{encodeURIComponent('readwisecosmos')}/dbs/@{encodeURIComponent('ReadWiseContentDB')}/colls/@{encodeURIComponent('Reviews')}/docs"
+                }
+            },
+            "Filter_Reviews": {
+                "runAfter": {
+                    "Get_Reviews_For_Journal": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Query",
+                "inputs": {
+                    "from": "@body('Get_Reviews_For_Journal')?['Documents']",
+                    "where": "@equals(item()?['journalId'], triggerOutputs()['queries']['id'])"
+                }
+            },
+            "Response_success": {
+                "runAfter": {
+                    "Filter_Reviews": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Response",
+                "kind": "Http",
+                "inputs": {
+                    "statusCode": 200,
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    },
+                    "body": {
+                        "id": "@{body('Get_Journal_Document')?['id']}",
+                        "title": "@{body('Get_Journal_Document')?['title']}",
+                        "content": "@{body('Get_Journal_Document')?['content']}",
+                        "userId": "@{body('Get_Journal_Document')?['userId']}",
+                        "username": "@{body('Get_Journal_Document')?['username']}",
+                        "coverUrl": "@{body('Get_Journal_Document')?['coverUrl']}",
+                        "notesUrl": "@{body('Get_Journal_Document')?['notesUrl']}",
+                        "audioUrl": "@{body('Get_Journal_Document')?['audioUrl']}",
+                        "created_at": "@{body('Get_Journal_Document')?['created_at']}",
+                        "reviews": "@body('Filter_Reviews')"
+                    }
+                }
+            }
+        },
+        "outputs": {},
+        "parameters": {
+            "$connections": {
+                "type": "Object",
+                "defaultValue": {}
+            }
+        }
+    },
+    "parameters": {
+        "$connections": {
+            "value": {
+                "documentdb": {
+                    "id": "/subscriptions/4a3defe0-aba0-41e1-9966-de8f64dbe2b3/providers/Microsoft.Web/locations/uksouth/managedApis/documentdb",
+                    "connectionId": "/subscriptions/4a3defe0-aba0-41e1-9966-de8f64dbe2b3/resourceGroups/ReadWise-RG/providers/Microsoft.Web/connections/documentdb",
+                    "connectionName": "documentdb"
+                }
+            }
+        }
+    }
+}

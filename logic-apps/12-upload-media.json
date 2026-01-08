@@ -1,0 +1,92 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "actions": {
+            "Create_blob_V2": {
+                "inputs": {
+                    "body": "@base64ToBinary(triggerBody()?['fileContent'])",
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['azureblob']['connectionId']"
+                        }
+                    },
+                    "method": "post",
+                    "path": "/v2/datasets/@{encodeURIComponent(encodeURIComponent('readwisestorage'))}/files",
+                    "queries": {
+                        "folderPath": "/@{triggerBody()?['containerName']}",
+                        "name": "@{triggerBody()?['fileName']}",
+                        "queryParametersSingleEncoded": true
+                    }
+                },
+                "runAfter": {},
+                "runtimeConfiguration": {
+                    "contentTransfer": {
+                        "transferMode": "Chunked"
+                    }
+                },
+                "type": "ApiConnection"
+            },
+            "Response": {
+                "inputs": {
+                    "body": {
+                        "publicUrl": "https://readwisestorage.blob.core.windows.net/@{triggerBody()?['containerName']}/@{triggerBody()?['fileName']}",
+                        "uploadUrl": "@{body('Create_blob_V2')?['Path']}"
+                    },
+                    "headers": {
+                        "Access-Control-Allow-Origin": "*",
+                        "Content-Type": "application/json"
+                    },
+                    "statusCode": 200
+                },
+                "kind": "Http",
+                "runAfter": {
+                    "Create_blob_V2": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Response"
+            }
+        },
+        "contentVersion": "1.0.0.0",
+        "outputs": {},
+        "parameters": {
+            "$connections": {
+                "defaultValue": {},
+                "type": "Object"
+            }
+        },
+        "triggers": {
+            "manual": {
+                "inputs": {
+                    "schema": {
+                        "properties": {
+                            "containerName": {
+                                "type": "string"
+                            },
+                            "fileContent": {
+                                "type": "string"
+                            },
+                            "fileName": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "kind": "Http",
+                "type": "Request"
+            }
+        }
+    },
+    "parameters": {
+        "$connections": {
+            "value": {
+                "azureblob": {
+                    "connectionId": "/subscriptions/4a3defe0-aba0-41e1-9966-de8f64dbe2b3/resourceGroups/ReadWise-RG/providers/Microsoft.Web/connections/azureblob",
+                    "connectionName": "azureblob",
+                    "id": "/subscriptions/4a3defe0-aba0-41e1-9966-de8f64dbe2b3/providers/Microsoft.Web/locations/uksouth/managedApis/azureblob"
+                }
+            }
+        }
+    }
+}

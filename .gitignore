@@ -5,9 +5,20 @@
 !frontend/
 !frontend/**
 
+# Whitelist Logic Apps configuration (自动部署)
+!logic-apps/
+!logic-apps/**
+
 # Whitelist github workflows
 !.github/
 !.github/**
+
+# Whitelist documentation files
+!README.md
+!logic-apps/README.md
+
+# Whitelist Static Web Apps configuration
+!staticwebapp.config.json
 
 # Whitelist gitignore itself
 !.gitignore

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReadWise - Login</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Application Insights SDK -->
+    <script src="https://az416426.vo.msecnd.net/scripts/b/ai.2.min.js"></script>
+    <script src="js/app-insights-init.js"></script>
+</head>
+
+<body class="login-page">
+
+    <div class="auth-container">
+        <div class="logo">ReadWise</div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="email" required placeholder="name@example.com">
+            </div>
+
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" required placeholder="••••••••">
+            </div>
+
+            <button type="submit" class="btn">Sign In</button>
+        </form>
+
+        <button onclick="toggleMode()" class="btn btn-secondary" id="toggleBtn">
+            No account? Create one
+        </button>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/telemetry.js"></script>
+    <script>
+        let isLogin = true;
+
+        function toggleMode() {
+            isLogin = !isLogin;
+            const title = document.querySelector('.logo');
+            const btn = document.querySelector('button[type="submit"]');
+            const toggle = document.querySelector('#toggleBtn');
+            const form = document.getElementById('loginForm');
+
+            // Add username field if registering
+            let userField = document.getElementById('usernameGroup');
+
+            if (!isLogin) {
+                if (!userField) {
+                    const div = document.createElement('div');
+                    div.className = 'form-group';
+                    div.id = 'usernameGroup';
+                    div.innerHTML = '<label>Username</label><input type="text" id="username" required>';
+                    form.insertBefore(div, form.firstChild);
+                }
+                title.textContent = 'Create Account';
+                btn.textContent = 'Sign Up';
+                toggle.textContent = 'Have an account? Sign In';
+            } else {
+                if (userField) userField.remove();
+                title.textContent = 'ReadWise';
+                btn.textContent = 'Sign In';
+                toggle.textContent = 'No account? Create one';
+            }
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const btn = document.querySelector('button[type="submit"]');
+            if (btn.disabled) return;
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            // UI Feedback
+            const originalBtnText = btn.textContent;
+            btn.textContent = 'Connecting...';
+            btn.disabled = true;
+
+            const endpoint = isLogin ? CONFIG.API.LOGIN : CONFIG.API.REGISTER;
+            console.log("🚀 Starting Request to:", endpoint);
+
+            const data = { email, password };
+            if (!isLogin) {
+                data.username = document.getElementById('username')?.value || 'User';
+            }
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                console.log("✅ Response Status:", res.status);
+
+                if (res.ok) {
+                    const result = await res.json();
+                    console.log("📦 Data:", result);
+
+                    if (!isLogin) {
+                        // Track registration success
+                        if (window.Telemetry) {
+                            window.Telemetry.trackEvent('UserRegistration', { 
+                                email: email,
+                                username: document.getElementById('username')?.value || 'User'
+                            });
+                        }
+                        alert('Account created successfully! Please Sign In.');
+                        toggleMode();
+                    } else {
+                        // Handle Logic App response variations (array or object)
+                        const userObj = Array.isArray(result) ? result[0] : result;
+
+                        if (!userObj || (!userObj.id && !userObj.userId)) {
+                            console.error("Invalid user data:", userObj);
+                            throw new Error("Received invalid user data from server");
+                        }
+
+                        const userData = {
+                            id: userObj.id || userObj.userId,
+                            username: userObj.username,
+                            email: userObj.email
+                        };
+                        localStorage.setItem('user', JSON.stringify(userData));
+
+                        // Track login success
+                        if (window.Telemetry) {
+                            window.Telemetry.setUserContext(userData.id, undefined, true);
+                            window.Telemetry.trackEvent('UserLogin', { 
+                                userId: userData.id, 
+                                username: userData.username,
+                                email: userData.email 
+                            });
+                        }
+
+                        console.log("🎉 Login Success, directing to dashboard...");
+                        window.location.href = 'dashboard.html';
+                    }
+                } else {
+                    const errorText = await res.text();
+                    console.error("❌ API Error:", errorText);
+                    alert('Action Failed: ' + (errorText || res.statusText));
+                }
+            } catch (err) {
+                console.error("❌ Network Error:", err);
+                alert('Connection Error: ' + err.message);
+            } finally {
+                btn.textContent = originalBtnText;
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+
+</html>

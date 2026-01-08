@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Journal - ReadWise</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Application Insights SDK -->
+    <script src="https://az416426.vo.msecnd.net/scripts/b/ai.2.min.js"></script>
+    <script src="js/app-insights-init.js"></script>
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <div class="nav-content">
+            <a href="dashboard.html" class="nav-logo">ReadWise</a>
+            <div class="nav-links">
+                <a href="dashboard.html"><i class="fas fa-home"></i> Home</a>
+                <a href="profile.html"><i class="fas fa-user"></i> My Profile</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="glass-card">
+            <h1
+                style="margin-bottom: 30px; border-bottom: 2px solid var(--primary-color); display: inline-block; padding-bottom: 10px;">
+                New Journal</h1>
+
+            <form id="createForm">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="title" required placeholder="Enter journal title...">
+                </div>
+
+                <div class="form-group">
+                    <label>Content</label>
+                    <textarea id="content" rows="10" required placeholder="Write your thoughts..."></textarea>
+                </div>
+
+                <div
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                    <!-- Cover Image -->
+                    <div class="form-group custom-file-input-group">
+                        <label><i class="fas fa-image" style="color: var(--primary-color);"></i> Cover Image</label>
+                        <input type="file" id="cover" accept="image/*" class="hidden-file-input"
+                            onchange="updateFileName(this, 'cover-label')">
+                        <label for="cover" class="file-label btn btn-secondary"
+                            style="width: auto; display: inline-block; cursor: pointer; margin-top: 5px;">
+                            <i class="fas fa-upload"></i> Choose File
+                        </label>
+                        <span id="cover-label"
+                            style="font-size: 12px; color: var(--text-secondary); margin-left: 10px;">No file
+                            chosen</span>
+                    </div>
+
+                    <!-- Handwritten Notes -->
+                    <div class="form-group custom-file-input-group">
+                        <label><i class="fas fa-sticky-note" style="color: #ff7675;"></i> Handwritten Notes</label>
+                        <input type="file" id="notes" accept="image/*" class="hidden-file-input"
+                            onchange="updateFileName(this, 'notes-label')">
+                        <label for="notes" class="file-label btn btn-secondary"
+                            style="width: auto; display: inline-block; cursor: pointer; margin-top: 5px;">
+                            <i class="fas fa-upload"></i> Choose File
+                        </label>
+                        <span id="notes-label"
+                            style="font-size: 12px; color: var(--text-secondary); margin-left: 10px;">No file
+                            chosen</span>
+                    </div>
+
+                    <!-- Audio Recording -->
+                    <div class="form-group custom-file-input-group">
+                        <label><i class="fas fa-microphone" style="color: #fdcb6e;"></i> Audio Recording</label>
+                        <input type="file" id="audio" accept="audio/*" class="hidden-file-input"
+                            onchange="updateFileName(this, 'audio-label')">
+                        <label for="audio" class="file-label btn btn-secondary"
+                            style="width: auto; display: inline-block; cursor: pointer; margin-top: 5px;">
+                            <i class="fas fa-upload"></i> Choose File
+                        </label>
+                        <span id="audio-label"
+                            style="font-size: 12px; color: var(--text-secondary); margin-left: 10px;">No file
+                            chosen</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn">
+                    <i class="fas fa-paper-plane"></i> Publish Journal
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/telemetry.js"></script>
+    <script>
+        const user = CONFIG.requireAuth();
+        const params = new URLSearchParams(window.location.search);
+        const editId = params.get('editId');
+        const editUserId = params.get('userId');
+        const isEditMode = !!editId;
+
+        // Update page title and button if editing
+        if (isEditMode) {
+            document.querySelector('h1').textContent = 'Edit Journal';
+            document.querySelector('title').textContent = 'Edit Journal - ReadWise';
+            document.querySelector('button[type="submit"]').textContent = 'Update Journal';
+        }
+
+        // Load existing data if editing
+        async function loadJournalForEdit() {
+            if (!isEditMode) return;
+
+            try {
+                const url = `${CONFIG.API.JOURNAL.GET_ONE}&id=${editId}&userId=${editUserId}`;
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('Failed to load journal');
+                const data = await res.json();
+
+                document.getElementById('title').value = data.title || '';
+                document.getElementById('content').value = data.content || '';
+                // Note: File inputs cannot be pre-filled for security reasons
+            } catch (e) {
+                console.error(e);
+                alert('Failed to load journal for editing');
+            }
+        }
+        loadJournalForEdit();
+
+        // Helper to convert file to base64
+        const toBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = error => reject(error);
+        });
+
+        // Helper to upload file via Logic App (MediaShare Pro style)
+        async function uploadFile(file, containerName) {
+            if (!file) return null;
+
+            try {
+                const fileContent = await toBase64(file);
+                const fileName = Date.now() + '-' + file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+
+                const res = await fetch(CONFIG.API.UPLOAD, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        containerName: containerName,
+                        fileName: fileName,
+                        fileContent: fileContent
+                    })
+                });
+
+                if (!res.ok) throw new Error('Upload failed');
+                const data = await res.json();
+                
+                // Track successful file upload
+                if (window.Telemetry) {
+                    window.Telemetry.trackEvent('FileUpload', {
+                        containerName: containerName,
+                        fileName: fileName,
+                        fileSize: file ? file.size : 0,
+                        fileType: file ? file.type : 'unknown'
+                    }, {
+                        fileSize: file ? file.size : 0,
+                        uploadDuration: Date.now() - (window.uploadStartTime || Date.now())
+                    });
+                }
+                
+                return data.publicUrl;
+            } catch (e) {
+                console.error('Upload failed:', e);
+                
+                // Track upload failure
+                if (window.Telemetry) {
+                    window.Telemetry.trackException(e, 'browser', {
+                        containerName: containerName,
+                        fileName: file ? file.name : 'unknown',
+                        errorMessage: e.message
+                    });
+                }
+                
+                alert('File upload failed: ' + e.message);
+                return null;
+            }
+        }
+
+        // Helper to update file label text
+        function updateFileName(input, labelId) {
+            const fileName = input.files && input.files.length > 0 ? input.files[0].name : "No file chosen";
+            document.getElementById(labelId).textContent = fileName;
+        }
+
+        document.getElementById('createForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = isEditMode ? 'Updating...' : 'Publishing...';
+
+            try {
+                const title = document.getElementById('title').value;
+                const content = document.getElementById('content').value;
+
+                const coverFile = document.getElementById('cover').files[0];
+                const notesFile = document.getElementById('notes').files[0];
+                const audioFile = document.getElementById('audio').files[0];
+
+                // Track upload start time
+                window.uploadStartTime = Date.now();
+
+                // Upload files in parallel with correct containers
+                const [coverUrl, notesUrl, audioUrl] = await Promise.all([
+                    uploadFile(coverFile, 'covers'),
+                    uploadFile(notesFile, 'notes'),
+                    uploadFile(audioFile, 'audio')
+                ]);
+
+                const journalData = {
+                    title,
+                    content,
+                    userId: String(user.id || user.userId),
+                    username: user.username,
+                    coverUrl: coverUrl || "",
+                    notesUrl: notesUrl || "",
+                    audioUrl: audioUrl || ""
+                };
+
+                let res;
+                if (isEditMode) {
+                    // Update existing journal
+                    journalData.id = editId;
+                    res = await fetch(CONFIG.API.JOURNAL.UPDATE, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(journalData)
+                    });
+                } else {
+                    // Create new journal
+                    res = await fetch(CONFIG.API.JOURNAL.CREATE, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(journalData)
+                    });
+                }
+
+                if (res.ok) {
+                    // Track successful journal creation/update
+                    if (window.Telemetry) {
+                        window.Telemetry.trackEvent(isEditMode ? 'JournalUpdated' : 'JournalCreated', {
+                            journalId: isEditMode ? editId : 'new',
+                            userId: user.id || user.userId,
+                            hasCover: !!coverUrl,
+                            hasNotes: !!notesUrl,
+                            hasAudio: !!audioUrl
+                        });
+                    }
+                    
+                    alert(isEditMode ? 'Journal updated successfully!' : 'Journal published successfully!');
+                    window.location.href = isEditMode ? `journal-detail.html?id=${editId}&userId=${editUserId}` : 'dashboard.html';
+                } else {
+                    throw new Error(isEditMode ? 'Failed to update journal' : 'Failed to create journal');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = isEditMode ? 'Update Journal' : 'Publish Journal';
+            }
+        });
+    </script>
+</body>
+
+</html>

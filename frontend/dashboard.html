@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - ReadWise</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Application Insights SDK -->
+    <script src="https://az416426.vo.msecnd.net/scripts/b/ai.2.min.js"></script>
+    <script src="js/app-insights-init.js"></script>
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <div class="nav-content">
+            <a href="dashboard.html" class="nav-logo">ReadWise</a>
+            <div class="nav-links">
+                <a href="dashboard.html" style="color: var(--primary-color);"><i class="fas fa-home"></i> Home</a>
+                <a href="profile.html"><i class="fas fa-user"></i> My Profile</a>
+                <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>Latest Journals</h1>
+        <br>
+
+        <div id="journalList">
+            <!-- Loading state -->
+            <p style="color: grey">Loading journals...</p>
+        </div>
+    </div>
+
+    <!-- Floating Action Button to Create Journal -->
+    <a href="create-journal.html" class="fab"><i class="fas fa-plus"></i></a>
+
+    <script src="js/config.js"></script>
+    <script>
+        const user = CONFIG.requireAuth();
+
+        // Add Welcome Message
+        const container = document.querySelector('.container');
+        const welcomeMsg = document.createElement('div');
+        welcomeMsg.style.marginBottom = '20px';
+        welcomeMsg.style.color = 'var(--primary-color)';
+        welcomeMsg.style.fontSize = '18px';
+        welcomeMsg.style.fontFamily = "'JetBrains Mono', monospace";
+        welcomeMsg.innerHTML = `Welcome back, <strong>${escapeHtml(user.username)}</strong>`;
+        container.insertBefore(welcomeMsg, container.firstChild);
+
+        const list = document.getElementById('journalList');
+
+        function logout() {
+            if (confirm('Are you sure you want to log out?')) {
+                localStorage.removeItem('user');
+                window.location.href = 'index.html';
+            }
+        }
+
+        async function fetchJournals() {
+            try {
+                // Call Logic App to get all journals
+                const res = await fetch(CONFIG.API.JOURNAL.GET_ALL);
+                if (!res.ok) throw new Error('Failed to fetch');
+
+                let data = await res.json();
+
+                // Logic App might return { Journals: [...] } or just [...]
+                // Adjust based on your Logic App output. Assuming array for now based on 'get-journals.json'
+                // If the logic app returns object, access the property.
+                if (data && !Array.isArray(data) && data.value) data = data.value; // Cosmos sometimes returns {value: []}
+
+                renderJournals(data || []);
+            } catch (e) {
+                console.error(e);
+                list.innerHTML = '<p style="color:var(--danger-color)">Failed to load journals. Please try again.</p>';
+            }
+        }
+
+        function renderJournals(journals) {
+            if (journals.length === 0) {
+                list.innerHTML = '<p>No journals yet. Click "+" to create one!</p>';
+                return;
+            }
+
+            list.innerHTML = journals.map(j => `
+                <div class="journal-card" onclick="location.href='journal-detail.html?id=${j.id}&userId=${j.userId}'">
+                    ${j.coverUrl ? `
+                    <div class="journal-cover-wrapper">
+                        <img src="${j.coverUrl}" class="journal-cover-img" loading="lazy" alt="Cover">
+                    </div>
+                    ` : ''}
+                    
+                    <div class="journal-content-area">
+                        <div class="journal-header">
+                            <span class="journal-title">${escapeHtml(j.title)}</span>
+                        </div>
+                        <div class="journal-date">${formatDate(j.created_at)}</div>
+                        <div class="journal-preview">${escapeHtml(j.content || '').substring(0, 100)}...</div>
+                        
+                        <div class="media-badges">
+                            ${j.audioUrl ? '<span class="badge"><i class="fas fa-microphone"></i> AUDIO</span>' : ''}
+                            ${j.notesUrl ? '<span class="badge"><i class="fas fa-sticky-note"></i> NOTES</span>' : ''}
+                        </div>
+                        <div class="journal-author" style="font-size:12px; color:var(--text-secondary); margin-top:10px">By ${escapeHtml(j.username)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Helper to prevent XSS
+        function escapeHtml(text) {
+            return text ? text.replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            return new Date(dateString).toLocaleDateString();
+        }
+
+        // Initialize directly
+        fetchJournals();
+    </script>
+</body>
+
+</html>

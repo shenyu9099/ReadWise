@@ -1,0 +1,33 @@
+name: Deploy Frontend to Azure Static Website
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'frontend/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Azure Static Website
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az storage blob upload-batch \
+              --connection-string "${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}" \
+              --destination '$web' \
+              --source ./frontend \
+              --overwrite
+
+      - name: Deployment Complete
+        run: |
+          echo "✅ Deployment successful!"
+          echo "🌐 Website URL: https://readwisestorage.z26.web.core.windows.net/"

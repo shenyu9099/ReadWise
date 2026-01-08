@@ -1,0 +1,13 @@
+# Ignore everything
+*
+
+# Whitelist frontend directory
+!frontend/
+!frontend/**
+
+# Whitelist github workflows
+!.github/
+!.github/**
+
+# Whitelist gitignore itself
+!.gitignore

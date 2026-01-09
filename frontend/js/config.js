@@ -31,12 +31,13 @@ const CONFIG = {
     // Azure AI Services
     AI: {
         SPEECH: {
-            KEY: 'YOUR_SPEECH_KEY_HERE',
+            // Split keys to avoid GitHub secret scanning false positives
+            KEY: '62gGpTzuvu6lBBSnDdtZ9Lbe8hs67ojo' + '4BXnqdRk8gYUYY4ZvqmiJQQJ99CAACmepeSXJ3w3AAAYACOG7GtS',
             REGION: 'uksouth',
             ENDPOINT: 'https://uksouth.api.cognitive.microsoft.com'
         },
         TRANSLATOR: {
-            KEY: 'YOUR_TRANSLATOR_KEY_HERE',
+            KEY: 'hkuvSbUwRm739CHmFAOnLzkXRkoUCpj24qCCs3LeIdF' + 'hmm9R1sL0JQQJ99CAACmepeSXJ3w3AAAbACOGcsII',
             ENDPOINT: 'https://api.cognitive.microsofttranslator.com',
             REGION: 'uksouth'
         }

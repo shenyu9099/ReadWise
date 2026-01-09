@@ -25,6 +25,9 @@
                             },
                             "audioUrl": {
                                 "type": "string"
+                            },
+                            "journalUserId": {
+                                "type": "string"
                             }
                         },
                         "required": [
@@ -73,6 +76,7 @@
                         "username": "@{triggerBody()?['username']}",
                         "content": "@{triggerBody()?['content']}",
                         "audioUrl": "@{coalesce(triggerBody()?['audioUrl'], '')}",
+                        "journalUserId": "@{coalesce(triggerBody()?['journalUserId'], '')}",
                         "created_at": "@{utcNow()}",
                         "updated_at": "@{utcNow()}"
                     },

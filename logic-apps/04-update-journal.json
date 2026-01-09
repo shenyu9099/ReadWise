@@ -31,6 +31,12 @@
                             },
                             "audioUrl": {
                                 "type": "string"
+                            },
+                            "notesUrls": {
+                                "type": "array"
+                            },
+                            "audioUrls": {
+                                "type": "array"
                             }
                         },
                         "required": [
@@ -80,8 +86,8 @@
                         "title": "@{coalesce(triggerBody()?['title'], body('Get_Existing_Journal')?['title'])}",
                         "content": "@{coalesce(triggerBody()?['content'], body('Get_Existing_Journal')?['content'])}",
                         "coverUrl": "@{coalesce(triggerBody()?['coverUrl'], body('Get_Existing_Journal')?['coverUrl'])}",
-                        "notesUrl": "@{coalesce(triggerBody()?['notesUrl'], body('Get_Existing_Journal')?['notesUrl'])}",
-                        "audioUrl": "@{coalesce(triggerBody()?['audioUrl'], body('Get_Existing_Journal')?['audioUrl'])}",
+                        "notesUrls": "@coalesce(triggerBody()?['notesUrls'], body('Get_Existing_Journal')?['notesUrls'])",
+                        "audioUrls": "@coalesce(triggerBody()?['audioUrls'], body('Get_Existing_Journal')?['audioUrls'])",
                         "created_at": "@{body('Get_Existing_Journal')?['created_at']}",
                         "updated_at": "@{utcNow()}"
                     },

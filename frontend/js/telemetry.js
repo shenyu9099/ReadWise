@@ -1,7 +1,7 @@
 // Application Insights Telemetry for ReadWise
 // This file initializes and provides telemetry tracking functions
 
-(function() {
+(function () {
     'use strict';
 
     // Application Insights Configuration
@@ -22,8 +22,8 @@
         try {
             // Check if Application Insights SDK is loaded
             if (typeof applicationInsights === 'undefined') {
-                console.warn('Application Insights SDK not loaded. Loading from CDN...');
-                loadAppInsightsSDK();
+                // SDK not available, skip initialization (app-insights-init.js handles this)
+                console.log('Telemetry: Waiting for Application Insights SDK...');
                 return null;
             }
 
@@ -48,7 +48,7 @@
 
             appInsights = applicationInsights.init(config.config);
             applicationInsights.loadAppInsights();
-            
+
             // Get the current user from localStorage if available
             try {
                 const user = localStorage.getItem('user');
@@ -77,11 +77,11 @@
         const script = document.createElement('script');
         script.src = 'https://az416426.vo.msecnd.net/scripts/b/ai.2.min.js';
         script.async = true;
-        script.onload = function() {
+        script.onload = function () {
             console.log('Application Insights SDK loaded, initializing...');
             initAppInsights();
         };
-        script.onerror = function() {
+        script.onerror = function () {
             console.error('Failed to load Application Insights SDK');
         };
         document.head.appendChild(script);
@@ -191,16 +191,16 @@
 
     // Initialize on page load
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             initAppInsights();
             // Track initial page view
-            setTimeout(function() {
+            setTimeout(function () {
                 trackPageView(window.location.pathname);
             }, 100);
         });
     } else {
         initAppInsights();
-        setTimeout(function() {
+        setTimeout(function () {
             trackPageView(window.location.pathname);
         }, 100);
     }
@@ -216,11 +216,11 @@
         setUserContext: setUserContext,
         clearUserContext: clearUserContext,
         flush: flush,
-        getAppInsights: function() { return appInsights; }
+        getAppInsights: function () { return appInsights; }
     };
 
     // Global error handler to track unhandled exceptions
-    window.addEventListener('error', function(event) {
+    window.addEventListener('error', function (event) {
         trackException({
             name: event.error ? event.error.name : 'Error',
             message: event.error ? event.error.message : event.message,
@@ -233,7 +233,7 @@
     });
 
     // Track unhandled promise rejections
-    window.addEventListener('unhandledrejection', function(event) {
+    window.addEventListener('unhandledrejection', function (event) {
         trackException({
             name: 'UnhandledPromiseRejection',
             message: event.reason ? (event.reason.message || String(event.reason)) : 'Unknown promise rejection'

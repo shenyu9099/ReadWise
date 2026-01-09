@@ -10,7 +10,7 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- Application Insights SDK -->
     <script src="https://az416426.vo.msecnd.net/scripts/b/ai.2.min.js"></script>
     <script src="js/app-insights-init.js"></script>
@@ -52,17 +52,61 @@
                             class="fas fa-image"></i> Cover</p>
                     <img id="img-cover" src="" alt="Cover" onclick="window.open(this.src)">
                 </div>
-                <!-- Notes -->
-                <div id="media-notes" class="media-item" style="display:none">
+                <!-- Notes (Multiple) -->
+                <div id="media-notes" style="display:none">
                     <p style="text-align:center; margin-bottom:10px; font-weight:600; color:var(--text-secondary)"><i
                             class="fas fa-sticky-note"></i> Notes</p>
-                    <img id="img-notes" src="" alt="Notes" onclick="window.open(this.src)">
+                    <div id="notes-gallery" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+                    </div>
                 </div>
-                <!-- Audio -->
-                <div id="media-audio" class="media-item" style="display:none; grid-column: 1 / -1;">
+                <!-- Audio (Multiple) -->
+                <div id="media-audio" style="display:none; grid-column: 1 / -1;">
                     <p style="text-align:center; margin-bottom:10px; font-weight:600; color:var(--text-secondary)"><i
-                            class="fas fa-microphone"></i> Audio Note</p>
-                    <audio id="audio-player" controls class="audio-player"></audio>
+                            class="fas fa-microphone"></i> Audio Notes</p>
+                    <div id="audio-gallery" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                    <!-- Transcribe Button with Language Selector -->
+                    <div
+                        style="text-align:center; margin-top:15px; display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap;">
+                        <select id="audio-language"
+                            style="padding:8px 12px; border-radius:8px; background:#2a2a3e; color:#fff; border:1px solid #667eea;">
+                            <option value="zh-CN">🇨🇳 Chinese</option>
+                            <option value="en-US">🇬🇧 English</option>
+                            <option value="ja-JP">🇯🇵 Japanese</option>
+                            <option value="ko-KR">🇰🇷 Korean</option>
+                        </select>
+                        <button id="transcribe-btn" onclick="transcribeAudio()" class="btn"
+                            style="width:auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding:8px 20px;">
+                            <i class="fas fa-file-alt"></i> Transcribe Audio
+                        </button>
+                    </div>
+                    <div id="transcription-result"
+                        style="display:none; margin-top:15px; padding:15px; background:rgba(0,0,0,0.3); border-radius:10px; white-space:pre-wrap;">
+                    </div>
+                </div>
+
+                <!-- AI Features -->
+                <div id="ai-features"
+                    style="grid-column: 1 / -1; margin-top:20px; padding:15px; background: linear-gradient(135deg, rgba(102,126,234,0.1) 0%, rgba(118,75,162,0.1) 100%); border-radius:12px; border: 1px solid rgba(102,126,234,0.3);">
+                    <p style="text-align:center; margin-bottom:15px; font-weight:600; color:#667eea;">
+                        <i class="fas fa-robot"></i> AI Features
+                    </p>
+                    <div style="display:flex; gap:15px; justify-content:center; flex-wrap:wrap;">
+                        <button onclick="translateContent('en')" class="btn"
+                            style="width:auto; background: #10b981; padding:8px 15px;">
+                            🇬🇧 Translate to English
+                        </button>
+                        <button onclick="translateContent('zh-Hans')" class="btn"
+                            style="width:auto; background: #f59e0b; padding:8px 15px;">
+                            🇨🇳 Translate to Chinese
+                        </button>
+                        <button onclick="translateContent('ja')" class="btn"
+                            style="width:auto; background: #ec4899; padding:8px 15px;">
+                            🇯🇵 Translate to Japanese
+                        </button>
+                    </div>
+                    <div id="translation-result"
+                        style="display:none; margin-top:15px; padding:15px; background:rgba(0,0,0,0.3); border-radius:10px; white-space:pre-wrap;">
+                    </div>
                 </div>
             </div>
 
@@ -147,21 +191,50 @@
 
             document.getElementById('j-title').textContent = data.title || 'Untitled';
             document.getElementById('j-author').innerHTML = `<i class="fas fa-user-circle"></i> ${data.username || 'Unknown'}`;
-            document.getElementById('j-date').textContent = data.created_at ? new Date(data.created_at).toLocaleDateString() : '';
+            document.getElementById('j-date').textContent = data.created_at ? new Date(data.created_at).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
             document.getElementById('j-content').innerText = data.content || ''; // innerText preserves newlines
 
-            // Media
+            // Media - Cover (single)
             if (data.coverUrl) {
                 document.getElementById('media-cover').style.display = 'block';
                 document.getElementById('img-cover').src = data.coverUrl;
             }
-            if (data.notesUrl) {
-                document.getElementById('media-notes').style.display = 'block';
-                document.getElementById('img-notes').src = data.notesUrl;
+
+            // Media - Notes (multiple or single for backward compatibility)
+            // Handle both array and JSON string formats
+            let notesUrls = data.notesUrls || [];
+            if (typeof notesUrls === 'string') {
+                try { notesUrls = JSON.parse(notesUrls); } catch (e) { notesUrls = []; }
             }
-            if (data.audioUrl) {
+            if (!Array.isArray(notesUrls)) notesUrls = [];
+            if (notesUrls.length === 0 && data.notesUrl) notesUrls = [data.notesUrl];
+
+            if (notesUrls.length > 0) {
+                document.getElementById('media-notes').style.display = 'block';
+                const notesGallery = document.getElementById('notes-gallery');
+                notesGallery.innerHTML = notesUrls.map(url => `
+                    <img src="${url}" alt="Note" onclick="window.open(this.src)" 
+                         style="max-width: 200px; max-height: 150px; border-radius: 8px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1);">
+                `).join('');
+            }
+
+            // Media - Audio (multiple or single for backward compatibility)
+            let audioUrls = data.audioUrls || [];
+            if (typeof audioUrls === 'string') {
+                try { audioUrls = JSON.parse(audioUrls); } catch (e) { audioUrls = []; }
+            }
+            if (!Array.isArray(audioUrls)) audioUrls = [];
+            if (audioUrls.length === 0 && data.audioUrl) audioUrls = [data.audioUrl];
+
+            if (audioUrls.length > 0) {
                 document.getElementById('media-audio').style.display = 'block';
-                document.getElementById('audio-player').src = data.audioUrl;
+                const audioGallery = document.getElementById('audio-gallery');
+                audioGallery.innerHTML = audioUrls.map((url, i) => `
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="color: var(--primary-color); font-size: 12px;">Audio ${i + 1}</span>
+                        <audio controls style="flex: 1;"><source src="${url}"></audio>
+                    </div>
+                `).join('');
             }
 
             // Reviews
@@ -169,7 +242,7 @@
             const reviewsList = document.getElementById('reviewsList');
             reviewsList.innerHTML = reviews.map(r => `
                 <div class="review-item">
-                    <div class="review-author">${r.username || 'User'} <span style="font-weight:400; color:grey; font-size:12px; float: right;">${r.created_at ? new Date(r.created_at).toLocaleDateString() : ''}</span></div>
+                    <div class="review-author">${r.username || 'User'} <span style="font-weight:400; color:grey; font-size:12px; float: right;">${r.created_at ? new Date(r.created_at).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}</span></div>
                     <div class="review-text">${r.content}</div>
                 </div>
             `).join('');
@@ -255,7 +328,8 @@
                     userId: user.id || user.userId,
                     username: user.username,
                     content: text,
-                    audioUrl: "" // TODO: Implement audio upload for reviews if needed
+                    audioUrl: "", // TODO: Implement audio upload for reviews if needed
+                    journalUserId: params.get('userId') // Author of the journal
                 };
 
                 const res = await fetch(CONFIG.API.REVIEW.CREATE, {
@@ -277,6 +351,134 @@
                 btn.disabled = false;
             }
         });
+
+        // Store current journal data for AI features
+        let currentJournalData = null;
+
+        // AI Feature: Transcribe Audio
+        async function transcribeAudio() {
+            const btn = document.getElementById('transcribe-btn');
+            const resultDiv = document.getElementById('transcription-result');
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Transcribing...';
+            resultDiv.style.display = 'none';
+
+            try {
+                // Get the first audio URL
+                const audioGallery = document.getElementById('audio-gallery');
+                const audioEl = audioGallery.querySelector('audio source');
+                if (!audioEl) {
+                    alert('No audio file found');
+                    return;
+                }
+
+                const audioUrl = audioEl.src;
+                console.log('Audio URL:', audioUrl);
+
+                // Fetch audio file
+                const audioResponse = await fetch(audioUrl);
+                const audioBlob = await audioResponse.blob();
+                console.log('Audio blob size:', audioBlob.size, 'type:', audioBlob.type);
+
+                // Determine content type based on file extension
+                let contentType = 'audio/wav';
+                if (audioUrl.includes('.mp3')) {
+                    contentType = 'audio/mpeg';
+                } else if (audioUrl.includes('.ogg')) {
+                    contentType = 'audio/ogg';
+                }
+
+                // Call Azure Speech-to-Text API with selected language
+                const selectedLang = document.getElementById('audio-language').value;
+                const response = await fetch(
+                    `https://${CONFIG.AI.SPEECH.REGION}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${selectedLang}&format=detailed`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Ocp-Apim-Subscription-Key': CONFIG.AI.SPEECH.KEY,
+                            'Content-Type': contentType,
+                            'Accept': 'application/json'
+                        },
+                        body: audioBlob
+                    }
+                );
+
+                console.log('Speech API response status:', response.status);
+                const responseText = await response.text();
+                console.log('Speech API response:', responseText);
+
+                if (response.ok && responseText) {
+                    const result = JSON.parse(responseText);
+                    const displayText = result.DisplayText || result.NBest?.[0]?.Display || result.Text;
+                    if (displayText) {
+                        resultDiv.innerHTML = `<strong>📝 Transcription Result:</strong><br><br>${displayText}`;
+                    } else {
+                        resultDiv.innerHTML = `<span style="color:#f59e0b;">⚠️ No speech detected in audio. Status: ${result.RecognitionStatus || 'Unknown'}</span>`;
+                    }
+                    resultDiv.style.display = 'block';
+                } else {
+                    console.error('Transcription error:', responseText);
+                    resultDiv.innerHTML = `<span style="color:#f87171;">Transcription failed (${response.status}): ${responseText || 'Unknown error'}</span>`;
+                    resultDiv.style.display = 'block';
+                }
+            } catch (err) {
+                console.error('Transcription error:', err);
+                resultDiv.innerHTML = `<span style="color:#f87171;">Transcription error: ${err.message}</span>`;
+                resultDiv.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-file-alt"></i> Transcribe Audio';
+            }
+        }
+
+        // AI Feature: Translate Content
+        async function translateContent(targetLang) {
+            const resultDiv = document.getElementById('translation-result');
+            const content = document.getElementById('j-content').textContent;
+
+            if (!content || content.trim() === '') {
+                alert('No content to translate');
+                return;
+            }
+
+            if (!CONFIG.AI.TRANSLATOR.KEY) {
+                alert('Translation service not configured');
+                return;
+            }
+
+            resultDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Translating...';
+            resultDiv.style.display = 'block';
+
+            try {
+                const response = await fetch(
+                    `${CONFIG.AI.TRANSLATOR.ENDPOINT}/translate?api-version=3.0&to=${targetLang}`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Ocp-Apim-Subscription-Key': CONFIG.AI.TRANSLATOR.KEY,
+                            'Ocp-Apim-Subscription-Region': CONFIG.AI.TRANSLATOR.REGION,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify([{ Text: content }])
+                    }
+                );
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const translatedText = result[0].translations[0].text;
+                    const langNames = { 'en': 'English', 'zh-Hans': 'Chinese', 'ja': 'Japanese' };
+                    resultDiv.innerHTML = `<strong>🌍 ${langNames[targetLang] || targetLang} Translation:</strong><br><br>${translatedText}`;
+                } else {
+                    const error = await response.text();
+                    console.error('Translation error:', error);
+                    resultDiv.innerHTML = `<span style="color:#f87171;">Translation failed: ${error}</span>`;
+                }
+            } catch (err) {
+                console.error('Translation error:', err);
+                resultDiv.innerHTML = `<span style="color:#f87171;">Translation error: ${err.message}</span>`;
+            }
+        }
     </script>
 </body>
 

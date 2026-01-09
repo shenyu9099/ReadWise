@@ -31,6 +31,12 @@
                             },
                             "audioUrl": {
                                 "type": "string"
+                            },
+                            "notesUrls": {
+                                "type": "array"
+                            },
+                            "audioUrls": {
+                                "type": "array"
                             }
                         },
                         "required": [
@@ -79,8 +85,8 @@
                         "title": "@{triggerBody()?['title']}",
                         "content": "@{triggerBody()?['content']}",
                         "coverUrl": "@{coalesce(triggerBody()?['coverUrl'], '')}",
-                        "notesUrl": "@{coalesce(triggerBody()?['notesUrl'], '')}",
-                        "audioUrl": "@{coalesce(triggerBody()?['audioUrl'], '')}",
+                        "notesUrls": "@coalesce(triggerBody()?['notesUrls'], json('[]'))",
+                        "audioUrls": "@coalesce(triggerBody()?['audioUrls'], json('[]'))",
                         "created_at": "@{utcNow()}",
                         "updated_at": "@{utcNow()}"
                     },

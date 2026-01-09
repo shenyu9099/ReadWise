@@ -216,7 +216,7 @@
                         <div class="journal-card" onclick="location.href='journal-detail.html?id=${j.id}&userId=${j.userId}'">
                             <div class="journal-header">
                                 <span class="journal-title">${escapeHtml(j.title)}</span>
-                                <span class="journal-date">${new Date(j.created_at).toLocaleDateString()}</span>
+                                <span class="journal-date">${new Date(j.created_at).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                             </div>
                             <div class="journal-preview">${escapeHtml(j.content || '').substring(0, 50)}...</div>
                         </div>
@@ -240,10 +240,12 @@
                 } else {
                     reviewList.innerHTML = reviews.map(r => `
                         <div class="review-item" style="cursor: default;">
-                            <div class="review-author">Review on Journal: ${r.journalId}</div>
+                            <div class="review-author" style="cursor:pointer; color:#00f3ff;" onclick="viewJournalFromReview('${r.journalId}', '${r.journalUserId}')">
+                                <i class="fas fa-external-link-alt" style="margin-right:5px;"></i>Review on Journal: ${r.journalId.substring(0, 8)}...
+                            </div>
                             <div class="review-text" id="review-content-${r.id}">${escapeHtml(r.content)}</div>
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-                                <span style="font-size: 12px; color: grey;">${new Date(r.created_at).toLocaleDateString()}</span>
+                                <span style="font-size: 12px; color: grey;">${new Date(r.created_at).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                                 <div style="display: flex; gap: 10px;">
                                     <button class="btn" style="background: #0071e3; color: white; padding: 5px 15px; width: auto; font-size: 12px;" 
                                         onclick="editReview('${r.id}', '${r.journalId}', \`${escapeHtml(r.content).replace(/`/g, '')}\`)">Edit</button>
@@ -354,6 +356,35 @@
         function logout() {
             localStorage.removeItem('user');
             window.location.href = 'index.html';
+        }
+
+        // Navigate to journal detail from review
+        async function viewJournalFromReview(journalId, journalUserId) {
+            // optimized: if we have the userId, go directly
+            if (journalUserId && journalUserId !== 'undefined' && journalUserId !== 'null') {
+                window.location.href = `journal-detail.html?id=${journalId}&userId=${journalUserId}`;
+                return;
+            }
+
+            // Fallback for old reviews: fetch to find author
+            try {
+                // Fetch journals to find the matching one
+                const res = await fetch(CONFIG.API.JOURNAL.GET_ALL);
+                if (res.ok) {
+                    const data = await res.json();
+                    const journals = data.value || data.Documents || data || [];
+                    const journal = journals.find(j => j.id === journalId || j.journalId === journalId);
+                    if (journal) {
+                        const userId = journal.userId || journal.authorId || '';
+                        window.location.href = `journal-detail.html?id=${journalId}&userId=${userId}`;
+                    } else {
+                        alert('Journal not found or access denied');
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Error loading journal info');
+            }
         }
 
         // Init

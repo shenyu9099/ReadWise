@@ -28,6 +28,20 @@ const CONFIG = {
         UPLOAD: "https://prod-27.uksouth.logic.azure.com:443/workflows/2a4cf2476e604b34845da116abd7c10c/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=aZEXO8L-MjOIZM3bWunmYpaWnKCCk6GPSL6v5YaAwWw"
     },
 
+    // Azure AI Services
+    AI: {
+        SPEECH: {
+            KEY: 'YOUR_SPEECH_KEY_HERE',
+            REGION: 'uksouth',
+            ENDPOINT: 'https://uksouth.api.cognitive.microsoft.com'
+        },
+        TRANSLATOR: {
+            KEY: 'YOUR_TRANSLATOR_KEY_HERE',
+            ENDPOINT: 'https://api.cognitive.microsofttranslator.com',
+            REGION: 'uksouth'
+        }
+    },
+
     // Helper to check if user is logged in
     requireAuth: () => {
         const user = localStorage.getItem('user');

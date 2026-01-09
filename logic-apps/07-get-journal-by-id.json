@@ -79,6 +79,8 @@
                         "userId": "@{body('Get_Journal_Document')?['userId']}",
                         "username": "@{body('Get_Journal_Document')?['username']}",
                         "coverUrl": "@{body('Get_Journal_Document')?['coverUrl']}",
+                        "notesUrls": "@coalesce(body('Get_Journal_Document')?['notesUrls'], json('[]'))",
+                        "audioUrls": "@coalesce(body('Get_Journal_Document')?['audioUrls'], json('[]'))",
                         "notesUrl": "@{body('Get_Journal_Document')?['notesUrl']}",
                         "audioUrl": "@{body('Get_Journal_Document')?['audioUrl']}",
                         "created_at": "@{body('Get_Journal_Document')?['created_at']}",

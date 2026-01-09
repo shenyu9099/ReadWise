@@ -1,17 +1,24 @@
 // Application Insights Initialization Script
 // This script initializes Application Insights with the connection string
 
-(function() {
+(function () {
     'use strict';
 
     // Application Insights Configuration
     const connectionString = "InstrumentationKey=5afd61df-6ab8-4e3c-89af-169d8791663b;IngestionEndpoint=https://uksouth-1.in.applicationinsights.azure.com/;LiveEndpoint=https://uksouth.livediagnostics.monitor.azure.com/;ApplicationId=0a33f593-2ae5-4ce1-aa58-ac246a8fcb9b";
 
+    let retryCount = 0;
+    const maxRetries = 10;
+
     // Wait for Application Insights SDK to load
     function initAppInsights() {
         if (typeof Microsoft === 'undefined' || typeof Microsoft.ApplicationInsights === 'undefined') {
-            console.warn('Application Insights SDK not loaded yet, retrying...');
-            setTimeout(initAppInsights, 100);
+            retryCount++;
+            if (retryCount < maxRetries) {
+                setTimeout(initAppInsights, 200);
+            } else {
+                console.warn('Application Insights SDK failed to load after ' + maxRetries + ' attempts');
+            }
             return;
         }
 
@@ -32,7 +39,7 @@
 
             var init = new Microsoft.ApplicationInsights.ApplicationInsights(snippet);
             var appInsights = init.loadAppInsights();
-            
+
             // Make appInsights globally available
             window.appInsights = appInsights;
 
